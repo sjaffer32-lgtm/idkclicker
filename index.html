@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>CYBER-CORE: SINGULARITY TYCOON</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #020108;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      color: #fff;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #app {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* Main Viewport */
+    .viewport {
+      flex: 1;
+      position: relative;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px;
+    }
+
+    canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+    }
+
+    .hud-top {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 10px;
+      pointer-events: none;
+    }
+
+    .energy-title {
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 3px;
+      color: #00f0ff;
+      text-shadow: 0 0 10px #00f0ff;
+    }
+
+    .energy-value {
+      font-size: 42px;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 0 20px #00f0ff, 0 0 40px #ff0077;
+    }
+
+    .hud-sub {
+      display: flex;
+      gap: 20px;
+      margin-top: 4px;
+    }
+
+    .eps-value {
+      font-size: 14px;
+      font-weight: 800;
+      color: #ffcc00;
+      text-shadow: 0 0 10px #ffcc00;
+    }
+
+    .darkmatter-value {
+      font-size: 14px;
+      font-weight: 800;
+      color: #aa00ff;
+      text-shadow: 0 0 10px #aa00ff;
+    }
+
+    /* Turbo Gauge */
+    .turbo-container {
+      position: relative;
+      z-index: 10;
+      width: 80%;
+      max-width: 380px;
+      margin-bottom: 20px;
+      background: rgba(10, 5, 25, 0.85);
+      border: 1.5px solid rgba(255, 0, 119, 0.5);
+      border-radius: 20px;
+      padding: 6px;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+    }
+
+    .turbo-bar {
+      height: 12px;
+      width: 0%;
+      background: linear-gradient(90deg, #ff0077, #ffcc00, #00f0ff);
+      border-radius: 10px;
+      box-shadow: 0 0 15px #ff0077;
+      transition: width 0.1s linear;
+    }
+
+    .turbo-label {
+      font-size: 10px;
+      font-weight: 900;
+      text-align: center;
+      letter-spacing: 2px;
+      color: #ff0077;
+      margin-top: 4px;
+    }
+
+    /* Sidebar Navigation & Upgrades */
+    .sidebar {
+      width: 400px;
+      height: 100%;
+      background: rgba(8, 4, 20, 0.94);
+      border-left: 2px solid rgba(0, 240, 255, 0.3);
+      backdrop-filter: blur(15px);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      padding: 15px;
+      box-shadow: -10px 0 30px rgba(0,0,0,0.8);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 0;
+      background: rgba(20, 12, 45, 0.6);
+      border: 1.5px solid rgba(0, 240, 255, 0.3);
+      border-radius: 8px;
+      color: #8888cc;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s;
+    }
+
+    .tab-btn.active {
+      background: rgba(0, 240, 255, 0.2);
+      border-color: #00f0ff;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    }
+
+    .panel {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 4px;
+    }
+
+    .panel::-webkit-scrollbar { width: 4px; }
+    .panel::-webkit-scrollbar-thumb { background: #00f0ff; border-radius: 2px; }
+
+    .upgrade-card {
+      background: rgba(20, 12, 45, 0.6);
+      border: 1.5px solid rgba(0, 240, 255, 0.2);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .upgrade-card:hover:not(.disabled) {
+      border-color: #00f0ff;
+      background: rgba(0, 240, 255, 0.15);
+      transform: translateX(-3px);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+    }
+
+    .upgrade-card.disabled { opacity: 0.4; cursor: not-allowed; border-color: #444; }
+
+    .upgrade-icon {
+      font-size: 28px;
+      width: 45px;
+      height: 45px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .upgrade-info { flex: 1; }
+    .upgrade-name { font-size: 13px; font-weight: 800; color: #fff; }
+    .upgrade-gain { font-size: 10px; color: #00f0ff; font-weight: 700; }
+    .upgrade-cost { font-size: 12px; font-weight: 900; color: #ffcc00; }
+    .upgrade-count { font-size: 18px; font-weight: 900; color: #ff0077; min-width: 30px; text-align: right; }
+
+    /* Singularity / Prestige Section */
+    .prestige-box {
+      background: rgba(40, 10, 60, 0.6);
+      border: 2px solid #aa00ff;
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(170, 0, 255, 0.3);
+    }
+
+    .prestige-title { font-size: 18px; font-weight: 900; color: #aa00ff; text-shadow: 0 0 10px #aa00ff; margin-bottom: 8px; }
+    .prestige-desc { font-size: 12px; color: #ccbbee; margin-bottom: 15px; line-height: 1.4; }
+
+    .btn-prestige {
+      background: linear-gradient(45deg, #aa00ff, #ff0077);
+      border: none;
+      padding: 12px 25px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 900;
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(170, 0, 255, 0.6);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .btn-prestige:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: 0 0 25px rgba(255, 0, 119, 0.9);
+    }
+
+    .btn-prestige:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
+
+    /* Overlay Visual FX */
+    .frenzy-flash {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0;
+      transition: opacity 0.2s;
+      box-shadow: inset 0 0 120px #ff0077;
+    }
+
+    .shake { animation: shake 0.1s cubic-bezier(.36,.07,.19,.97) both; }
+
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-2px, 2px, 0); }
+      20%, 80% { transform: translate3d(4px, -3px, 0); }
+      30%, 50%, 70% { transform: translate3d(-6px, 4px, 0); }
+      40%, 60% { transform: translate3d(6px, -2px, 0); }
+    }
+
+    @media (max-width: 800px) {
+      #app { flex-direction: column; }
+      .sidebar { width: 100%; height: 50%; border-left: none; border-top: 2px solid #00f0ff; }
+      .viewport { height: 50%; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <div class="frenzy-flash" id="frenzy-flash"></div>
+    <div class="viewport" id="viewport">
+      <canvas id="coreCanvas"></canvas>
+
+      <div class="hud-top">
+        <div class="energy-title">QUANTUM ENERGY</div>
+        <div class="energy-value" id="val-energy">0</div>
+        <div class="hud-sub">
+          <div class="eps-value" id="val-eps">+0 / SEC</div>
+          <div class="darkmatter-value" id="val-dm">0 DARK MATTER (+0%)</div>
+        </div>
+      </div>
+
+      <div class="turbo-container">
+        <div class="turbo-bar" id="turbo-bar"></div>
+        <div class="turbo-label" id="turbo-label">TAP RAPIDLY TO OVERCHARGE THE CORE</div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="tabs">
+        <div class="tab-btn active" id="tab-upgrades" onclick="switchTab('upgrades')">UPGRADES</div>
+        <div class="tab-btn" id="tab-research" onclick="switchTab('research')">RESEARCH</div>
+        <div class="tab-btn" id="tab-singularity" onclick="switchTab('singularity')">SINGULARITY</div>
+      </div>
+
+      <div class="panel" id="panel-upgrades"></div>
+      <div class="panel" id="panel-research" style="display:none;"></div>
+      <div class="panel" id="panel-singularity" style="display:none;">
+        <div class="prestige-box">
+          <div class="prestige-title">SINGULARITY COLLAPSE</div>
+          <div class="prestige-desc">
+            Collapse your reactor network into a dense Quantum Singularity.<br><br>
+            Resets Energy and Generator Upgrades, but converts your progress into <b>Dark Matter</b>.<br>
+            Each Dark Matter grants <b>+20% permanent boost</b> to all generation!
+          </div>
+          <div style="font-size: 16px; font-weight: 900; color: #00f0ff; margin-bottom: 15px;" id="pending-dm">
+            GAIN: +0 DARK MATTER
+          </div>
+          <button class="btn-prestige" id="btn-collapse" onclick="triggerSingularity()" disabled>INITIATE COLLAPSE</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('coreCanvas');
+    const ctx = canvas.getContext('2d');
+    const viewport = document.getElementById('viewport');
+    const frenzyFlash = document.getElementById('frenzy-flash');
+
+    let width, height;
+    function resize() {
+      width = canvas.width = viewport.clientWidth;
+      height = canvas.height = viewport.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+
+    // Web Audio Synthesizer
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playSfx(type) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      const t = audioCtx.currentTime;
+
+      if (type === 'pulse') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(160, t);
+        osc.frequency.exponentialRampToValueAtTime(40, t + 0.08);
+        gain.gain.setValueAtTime(0.12, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.08);
+        osc.start(t); osc.stop(t + 0.08);
+      } else if (type === 'buy') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, t);
+        osc.frequency.exponentialRampToValueAtTime(700, t + 0.12);
+        gain.gain.setValueAtTime(0.15, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+        osc.start(t); osc.stop(t + 0.12);
+      } else if (type === 'frenzy') {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, t);
+        osc.frequency.linearRampToValueAtTime(850, t + 0.35);
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
+        osc.start(t); osc.stop(t + 0.35);
+      } else if (type === 'prestige') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(100, t);
+        osc.frequency.linearRampToValueAtTime(1200, t + 0.8);
+        gain.gain.setValueAtTime(0.25, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+        osc.start(t); osc.stop(t + 0.8);
+      } else if (type === 'anomaly') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523, t);
+        osc.frequency.setValueAtTime(783, t + 0.08);
+        osc.frequency.setValueAtTime(1046, t + 0.16);
+        gain.gain.setValueAtTime(0.2, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        osc.start(t); osc.stop(t + 0.3);
+      }
+    }
+
+    // State Variables
+    let energy = 0;
+    let totalLifetimeEnergy = 0;
+    let clickPower = 1;
+    let darkMatter = 0;
+    let turboCharge = 0;
+    let isFrenzy = false;
+    let frenzyTimer = 0;
+    let activeTab = 'upgrades';
+    let lastTime = performance.now();
+
+    // Generators (Steeper scaling: 1.18x multiplier)
+    const upgrades = [
+      { id: 'tap', name: 'Plasma Injector', baseCost: 15, cps: 0, clickGain: 1, count: 0, icon: '⚡' },
+      { id: 'drone', name: 'Auto-Pulse Drone', baseCost: 100, cps: 4, count: 0, icon: '🛸' },
+      { id: 'drill', name: 'Sub-Space Drill', baseCost: 1100, cps: 32, count: 0, icon: '⛏️' },
+      { id: 'fusion', name: 'Fusion Reactor', baseCost: 12000, cps: 260, count: 0, icon: '☢️' },
+      { id: 'synchrotron', name: 'Particle Synchrotron', baseCost: 130000, cps: 1800, count: 0, icon: '🌀' },
+      { id: 'quantum', name: 'Quantum Core', baseCost: 1400000, cps: 14000, count: 0, icon: '💻' },
+      { id: 'dyson', name: 'Dyson Swarm Matrix', baseCost: 20000000, cps: 130000, count: 0, icon: '🌟' },
+      { id: 'darkdrive', name: 'Dark Energy Engine', baseCost: 350000000, cps: 1100000, count: 0, icon: '🔮' },
+      { id: 'chronos', name: 'Chronos Accelerator', baseCost: 5000000000, cps: 9500000, count: 0, icon: '⏳' },
+      { id: 'multiverse', name: 'Multiverse Harvester', baseCost: 90000000000, cps: 80000000, count: 0, icon: '🌌' }
+    ];
+
+    // Research Tech (One-time multipliers)
+    const research = [
+      { id: 'r1', name: 'Overclocked Cores', cost: 500, multiplier: 1.5, bought: false, desc: 'Increases all generation by +50%' },
+      { id: 'r2', name: 'Hyper-Conductors', cost: 25000, multiplier: 2.0, bought: false, desc: 'Doubles all energy output' },
+      { id: 'r3', name: 'Sub-Atomic Splitting', cost: 1000000, multiplier: 2.5, bought: false, desc: '+150% Energy Generation' },
+      { id: 'r4', name: 'Temporal Loop Engine', cost: 50000000, multiplier: 3.0, bought: false, desc: 'Triples all system efficiency' },
+      { id: 'r5', name: 'Reality Weaver Tech', cost: 2000000000, multiplier: 5.0, bought: false, desc: '5x Energy Production Boost' }
+    ];
+
+    // Graphics Entities
+    let coreRadius = 75;
+    let corePulse = 0;
+    let particles = [];
+    let floatingTexts = [];
+    let anomaly = null;
+
+    class Particle {
+      constructor(x, y, color) {
+        this.x = x; this.y = y;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 8 + 2;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = Math.sin(angle) * speed;
+        this.color = color;
+        this.life = 1.0;
+        this.decay = Math.random() * 0.03 + 0.02;
+        this.size = Math.random() * 5 + 2;
+      }
+      update() {
+        this.x += this.vx; this.y += this.vy;
+        this.vx *= 0.95; this.vy *= 0.95;
+        this.life -= this.decay;
+        return this.life <= 0;
+      }
+      draw() {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    class FloatingText {
+      constructor(x, y, text, color) {
+        this.x = x; this.y = y; this.text = text; this.color = color; this.life = 1.0;
+      }
+      update() { this.y -= 2.2; this.life -= 0.025; return this.life <= 0; }
+      draw() {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.font = '900 20px "Segoe UI", sans-serif';
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = this.color;
+        ctx.fillText(this.text, this.x - 15, this.y);
+        ctx.restore();
+      }
+    }
+
+    class Anomaly {
+      constructor() {
+        this.radius = 22;
+        this.x = Math.random() * (width - 120) + 60;
+        this.y = Math.random() * (height - 200) + 100;
+        this.life = 1.0;
+        this.pulse = 0;
+        this.type = Math.random() < 0.8 ? 'gold' : 'glitch';
+        this.color = this.type === 'gold' ? '#ffcc00' : '#ff0055';
+      }
+      update() {
+        this.life -= 0.0025;
+        this.pulse += 0.1;
+        return this.life <= 0;
+      }
+      draw() {
+        ctx.save();
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius + Math.sin(this.pulse) * 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function createExplosion(x, y, color, count = 20) {
+      for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color));
+    }
+
+    function getResearchMultiplier() {
+      let mult = 1.0;
+      research.forEach(r => { if (r.bought) mult *= r.multiplier; });
+      return mult;
+    }
+
+    function getDarkMatterMultiplier() {
+      return 1.0 + (darkMatter * 0.20); // +20% per DM
+    }
+
+    function getEPS() {
+      let baseEps = 0;
+      upgrades.forEach(u => baseEps += u.cps * u.count);
+      let total = baseEps * getResearchMultiplier() * getDarkMatterMultiplier();
+      return isFrenzy ? total * 5 : total;
+    }
+
+    function getCost(u) {
+      return Math.floor(u.baseCost * Math.pow(1.18, u.count));
+    }
+
+    function getPendingDarkMatter() {
+      if (totalLifetimeEnergy < 10000000) return 0;
+      return Math.floor(Math.pow(totalLifetimeEnergy / 10000000, 0.4));
+    }
+
+    // Core Tap Event
+    function tapCore(x, y) {
+      initAudio();
+      const gained = clickPower * getResearchMultiplier() * getDarkMatterMultiplier() * (isFrenzy ? 5 : 1);
+      energy += gained;
+      totalLifetimeEnergy += gained;
+      playSfx('pulse');
+
+      corePulse = 18;
+      createExplosion(x, y, isFrenzy ? '#ff0077' : '#00f0ff', 10);
+      floatingTexts.push(new FloatingText(x, y, `+${formatNum(gained)}`, isFrenzy ? '#ff0077' : '#00f0ff'));
+
+      // Turbo Charging Logic
+      if (!isFrenzy) {
+        turboCharge += 5;
+        if (turboCharge >= 100) {
+          isFrenzy = true;
+          frenzyTimer = 300; // ~5 sec duration
+          playSfx('frenzy');
+          frenzyFlash.style.opacity = '1';
+          viewport.classList.add('shake');
+          floatingTexts.push(new FloatingText(width / 2, height / 2 - 80, 'HYPER FRENZY 5X!', '#ff0077'));
+        }
+      }
+
+      updateUI();
+    }
+
+    viewport.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Anomaly Hit
+      if (anomaly) {
+        const distA = Math.hypot(x - anomaly.x, y - anomaly.y);
+        if (distA <= anomaly.radius + 15) {
+          if (anomaly.type === 'gold') {
+            const reward = Math.max(500, getEPS() * 25);
+            energy += reward;
+            totalLifetimeEnergy += reward;
+            playSfx('anomaly');
+            createExplosion(anomaly.x, anomaly.y, '#ffcc00', 30);
+            floatingTexts.push(new FloatingText(anomaly.x, anomaly.y, `OVERCHARGE! +${formatNum(reward)}`, '#ffcc00'));
+          } else {
+            // Glitch Anomaly triggers instant frenzy
+            isFrenzy = true;
+            frenzyTimer = 300;
+            playSfx('frenzy');
+            frenzyFlash.style.opacity = '1';
+            createExplosion(anomaly.x, anomaly.y, '#ff0055', 30);
+            floatingTexts.push(new FloatingText(anomaly.x, anomaly.y, 'GLITCH OVERLOAD!', '#ff0055'));
+          }
+          anomaly = null;
+          updateUI();
+          return;
+        }
+      }
+
+      // Reactor Core Hit
+      const distCore = Math.hypot(x - width / 2, y - height / 2);
+      if (distCore <= coreRadius + 40) {
+        tapCore(x, y);
+      }
+    });
+
+    // UI Tab Switching
+    function switchTab(tab) {
+      activeTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+
+      document.getElementById('panel-upgrades').style.display = tab === 'upgrades' ? 'flex' : 'none';
+      document.getElementById('panel-research').style.display = tab === 'research' ? 'flex' : 'none';
+      document.getElementById('panel-singularity').style.display = tab === 'singularity' ? 'flex' : 'none';
+
+      renderPanel();
+    }
+
+    function renderPanel() {
+      if (activeTab === 'upgrades') {
+        const p = document.getElementById('panel-upgrades');
+        p.innerHTML = '';
+        upgrades.forEach((u, idx) => {
+          const cost = getCost(u);
+          const canAfford = energy >= cost;
+          const card = document.createElement('div');
+          card.className = `upgrade-card ${canAfford ? '' : 'disabled'}`;
+          card.onclick = () => buyUpgrade(idx);
+          card.innerHTML = `
+            <div class="upgrade-icon">${u.icon}</div>
+            <div class="upgrade-info">
+              <div class="upgrade-name">${u.name}</div>
+              <div class="upgrade-gain">${u.cps > 0 ? `+${formatNum(u.cps * getResearchMultiplier() * getDarkMatterMultiplier())} EPS` : `+${u.clickGain} Base Tap`}</div>
+              <div class="upgrade-cost">⚡ ${formatNum(cost)}</div>
+            </div>
+            <div class="upgrade-count">${u.count}</div>
+          `;
+          p.appendChild(card);
+        });
+      } else if (activeTab === 'research') {
+        const p = document.getElementById('panel-research');
+        p.innerHTML = '';
+        research.forEach((r, idx) => {
+          const canAfford = energy >= r.cost && !r.bought;
+          const card = document.createElement('div');
+          card.className = `upgrade-card ${r.bought ? 'disabled' : (canAfford ? '' : 'disabled')}`;
+          card.onclick = () => buyResearch(idx);
+          card.innerHTML = `
+            <div class="upgrade-icon">🧪</div>
+            <div class="upgrade-info">
+              <div class="upgrade-name">${r.name}</div>
+              <div class="upgrade-gain">${r.desc}</div>
+              <div class="upgrade-cost">${r.bought ? 'RESEARCHED' : '⚡ ' + formatNum(r.cost)}</div>
+            </div>
+          `;
+          p.appendChild(card);
+        });
+      } else if (activeTab === 'singularity') {
+        const pending = getPendingDarkMatter();
+        document.getElementById('pending-dm').innerText = `GAIN: +${pending.toLocaleString()} DARK MATTER`;
+        document.getElementById('btn-collapse').disabled = pending <= 0;
+      }
+    }
+
+    function buyUpgrade(idx) {
+      initAudio();
+      const u = upgrades[idx];
+      const cost = getCost(u);
+      if (energy >= cost) {
+        energy -= cost;
+        u.count++;
+        if (u.clickGain) clickPower += u.clickGain;
+        playSfx('buy');
+        updateUI();
+      }
+    }
+
+    function buyResearch(idx) {
+      initAudio();
+      const r = research[idx];
+      if (!r.bought && energy >= r.cost) {
+        energy -= r.cost;
+        r.bought = true;
+        playSfx('buy');
+        updateUI();
+      }
+    }
+
+    function triggerSingularity() {
+      const pending = getPendingDarkMatter();
+      if (pending <= 0) return;
+
+      playSfx('prestige');
+      darkMatter += pending;
+      energy = 0;
+      totalLifetimeEnergy = 0;
+      clickPower = 1;
+
+      // Reset Upgrade Counts
+      upgrades.forEach(u => u.count = 0);
+      research.forEach(r => r.bought = false);
+
+      createExplosion(width / 2, height / 2, '#aa00ff', 60);
+      floatingTexts.push(new FloatingText(width / 2, height / 2, `SINGULARITY COLLAPSED! +${pending} DM`, '#aa00ff'));
+
+      switchTab('upgrades');
+      updateUI();
+    }
+
+    function formatNum(num) {
+      if (num >= 1e15) return (num / 1e15).toFixed(2) + 'Qa';
+      if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+      if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+      if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+      if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+      return Math.floor(num).toLocaleString();
+    }
+
+    function updateUI() {
+      document.getElementById('val-energy').innerText = formatNum(energy);
+      document.getElementById('val-eps').innerText = `+${formatNum(getEPS())} / SEC`;
+      document.getElementById('val-dm').innerText = `${darkMatter.toLocaleString()} DARK MATTER (+${(darkMatter * 20)}%)`;
+
+      const bar = document.getElementById('turbo-bar');
+      bar.style.width = `${Math.min(100, turboCharge)}%`;
+
+      renderPanel();
+    }
+
+    // Main Game Loop
+    function loop(timestamp) {
+      const dt = (timestamp - lastTime) / 1000;
+      lastTime = timestamp;
+
+      // Auto Generation
+      const generated = getEPS() * dt;
+      energy += generated;
+      totalLifetimeEnergy += generated;
+
+      // Turbo / Overcharge Mechanics
+      if (isFrenzy) {
+        frenzyTimer--;
+        turboCharge = (frenzyTimer / 300) * 100;
+        if (frenzyTimer <= 0) {
+          isFrenzy = false;
+          frenzyFlash.style.opacity = '0';
+          viewport.classList.remove('shake');
+          turboCharge = 0;
+        }
+      } else {
+        if (turboCharge > 0) turboCharge -= dt * 12;
+      }
+
+      // Random Anomalies Spawning
+      if (!anomaly && Math.random() < 0.0018) {
+        anomaly = new Anomaly();
+      }
+
+      // Render Visual Canvas Background & Core
+      ctx.fillStyle = 'rgba(2, 1, 8, 0.35)';
+      ctx.fillRect(0, 0, width, height);
+
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      if (corePulse > 0) corePulse *= 0.9;
+
+      // Core Dynamic Rings
+      ctx.save();
+      ctx.shadowBlur = isFrenzy ? 40 : 20;
+      ctx.shadowColor = isFrenzy ? '#ff0077' : '#00f0ff';
+      ctx.strokeStyle = isFrenzy ? '#ff0077' : '#00f0ff';
+      ctx.lineWidth = 4;
+
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, coreRadius + 15 + corePulse + Math.sin(timestamp * 0.005) * 8, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Main Core Reactor
+      ctx.fillStyle = isFrenzy ? '#ff0077' : '#00f0ff';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, coreRadius + corePulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glowing Inner Center
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, (coreRadius + corePulse) * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // Anomaly Logic
+      if (anomaly) {
+        if (anomaly.update()) anomaly = null;
+        else anomaly.draw();
+      }
+
+      // Render Particles & Floaters
+      for (let i = particles.length - 1; i >= 0; i--) {
+        if (particles[i].update()) particles.splice(i, 1);
+        else particles[i].draw();
+      }
+
+      for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        if (floatingTexts[i].update()) floatingTexts.splice(i, 1);
+        else floatingTexts[i].draw();
+      }
+
+      updateUI();
+      requestAnimationFrame(loop);
+    }
+
+    resize();
+    renderPanel();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
